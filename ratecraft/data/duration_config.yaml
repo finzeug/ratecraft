@@ -1,0 +1,46 @@
+# Duration configuration for bond ETFs and funds
+# User-maintained file with effective durations in years
+# These values should be updated periodically from fund fact sheets
+
+etf_durations:
+  # Treasury ETFs
+  TLT: 17.5    # iShares 20+ Year Treasury Bond ETF
+  IEF: 7.5     # iShares 7-10 Year Treasury Bond ETF
+  SHY: 1.9     # iShares 1-3 Year Treasury Bond ETF
+  GOVT: 6.5    # iShares U.S. Treasury Bond ETF
+  VGSH: 1.9    # Vanguard Short-Term Treasury ETF
+  VGIT: 5.2    # Vanguard Intermediate-Term Treasury ETF
+  VGLT: 16.5   # Vanguard Long-Term Treasury ETF
+
+  # TIPS ETFs
+  TIP: 6.8     # iShares TIPS Bond ETF
+  VTIP: 2.5    # Vanguard Short-Term Inflation-Protected Securities ETF
+  SCHP: 6.5    # Schwab U.S. TIPS ETF
+
+  # Aggregate/Broad Bond ETFs
+  BND: 6.3     # Vanguard Total Bond Market ETF
+  AGG: 6.2     # iShares Core U.S. Aggregate Bond ETF
+  BNDX: 7.2    # Vanguard Total International Bond ETF
+  FXNAX: 6.3   # Fidelity U.S. Bond Index Fund
+
+  # Corporate Bond ETFs
+  LQD: 8.5     # iShares iBoxx $ Investment Grade Corporate Bond ETF
+  VCIT: 6.0    # Vanguard Intermediate-Term Corporate Bond ETF
+  VCLT: 13.5   # Vanguard Long-Term Corporate Bond ETF
+
+  # High-Yield Bond ETFs
+  HYG: 3.8     # iShares iBoxx $ High Yield Corporate Bond ETF
+  JNK: 3.5     # SPDR Bloomberg High Yield Bond ETF
+  SJNK: 1.8    # SPDR Bloomberg Short Term High Yield Bond ETF
+  SCYB: 2.0    # Schwab High Yield Bond ETF
+  FSAHX: 3.5   # Fidelity Strategic Advisers High Yield Fund
+
+  # Floating Rate ETFs (near-zero duration)
+  FLOT: 0.1    # iShares Floating Rate Bond ETF
+  FFRHX: 0.2   # Fidelity Floating Rate High Income Fund
+
+  # Government/Agency Bond ETFs
+  MBB: 5.5     # iShares MBS ETF
+
+  # Stable Value / Short Duration
+  SHV: 0.3     # iShares Short Treasury Bond ETF

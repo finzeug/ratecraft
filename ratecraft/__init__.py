@@ -4,7 +4,7 @@ ratecraft — fixed income math: bonds, yield curves, duration, and inflation.
 Pure calculation library with no I/O or data fetching.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 
 __all__ = [
     "Bond",

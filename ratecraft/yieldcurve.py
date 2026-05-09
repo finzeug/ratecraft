@@ -95,8 +95,14 @@ class YieldCurve:
         # begging for review
         p["days"] = (p.maturity_date - self.d0).map(lambda dd: dd.days)
 
-        # Bond instance column
-        p["bond"] = p.apply(Bond, axis=1)
+        # Bond instance column. Use a list comprehension instead of
+        # p.apply(Bond, axis=1) — pandas 2.x's apply infers from the return
+        # type and may expand a Bond instance into a DataFrame (because the
+        # instance carries .p, .coupon_dates, etc. that pandas treats as
+        # multiple values), which then fails the column assignment with
+        # "Cannot set a DataFrame with multiple columns to the single
+        # column bond". The comprehension keeps each Bond as one scalar.
+        p["bond"] = [Bond(row) for _, row in p.iterrows()]
         self.p = p
 
         rates = self._prep_rates()  # prepare the attribute "rates"

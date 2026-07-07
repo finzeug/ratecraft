@@ -3,4 +3,4 @@
 	url = https://github.com/brianholland/dev-common.git
 [submodule "stack-common"]
 	path = stack-common
-	url = https://github.com/brianholland/home-site-common.git
+	url = https://github.com/bdh-org/home-stack-common.git

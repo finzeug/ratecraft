@@ -90,3 +90,7 @@ credentials needed to fetch it. It carries the shared `common` (public) and
 `stack-common` (private, dev tooling only) submodules for consistent dev
 scaffolding; those are **not** needed to use the library — a non-recursive
 clone or a plain `pip install` gets you the math with no auth.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

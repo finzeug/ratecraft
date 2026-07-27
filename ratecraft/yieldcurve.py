@@ -57,6 +57,13 @@ class YieldCurve:
 
         assert basis in ["mean", "buy", "sell"]
         self.basis = basis
+        # Accepted since the signature was written, never stored and never
+        # forwarded (finzeug/ratecraft#17): a curve built with
+        # `ex_coupon_days=200` produced accrued-interest factors identical to
+        # one built with `=1`, silently pinning the coupon boundary to the
+        # module default. A parameter that does nothing is worse than no
+        # parameter, because the caller believes it worked.
+        self.ex_coupon_days = ex_coupon_days
         # Set the initial date: date of the prices
         self.d0 = pd.to_datetime(
             d0, utc=True
@@ -88,6 +95,17 @@ class YieldCurve:
 
         # to avoid issues creeping in with utc-aware and utc-naive dates being compared
         p["maturity_date"] = pd.to_datetime(p["maturity_date"], utc=True)
+        # ...and price_date with it (finzeug/ratecraft#17). Making one aware and
+        # leaving the other naive is worse than leaving both alone: every
+        # `Bond.ytm()` built from a YieldCurve raised
+        # `TypeError: Cannot subtract tz-naive and tz-aware` at
+        # `(p.maturity_date - d).days`, and the bare `except` around the solve
+        # turned that into a silent NaN. So `ytm()`, `income()` and
+        # `const_rate_pv()` were dead on the normal construction path, and any
+        # consumer charting yields got an all-NaN column with nothing logged as
+        # a failure.
+        if "price_date" in p:
+            p["price_date"] = pd.to_datetime(p["price_date"], utc=True)
         p = p.sort_values("maturity_date")
         # Day count used in calculations
 
@@ -102,7 +120,7 @@ class YieldCurve:
         # multiple values), which then fails the column assignment with
         # "Cannot set a DataFrame with multiple columns to the single
         # column bond". The comprehension keeps each Bond as one scalar.
-        p["bond"] = [Bond(row) for _, row in p.iterrows()]
+        p["bond"] = [Bond(row, ex_coupon_days=self.ex_coupon_days) for _, row in p.iterrows()]
         self.p = p
 
         rates = self._prep_rates()  # prepare the attribute "rates"
@@ -339,7 +357,9 @@ class YieldCurve:
         rates["price"] = rates["price"] / 100  # for $1 of principal for the bonds
         rates["maturity_date"] = rates.index  # for use in computations
         rates["accrued_interest_factor"] = rates.maturity_date.map(
-            lambda _: accrued_interest_factor(self.d0, _)
+            lambda _: accrued_interest_factor(
+                self.d0, _, ex_coupon_days=self.ex_coupon_days
+            )
         )
         rates["prior_date"] = rates.maturity_date.shift()
         md = list(rates.index)  # maturity dates

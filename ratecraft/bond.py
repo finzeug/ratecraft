@@ -259,8 +259,18 @@ class Bond:
         try:
             x = sp.optimize.fsolve(f, 0.02)  # Solve for the yield
             return x[0]  # 'x' attribute is an array
-        except Exception as e:
-            logger.error(f"Exception: {e}")
+        except (ValueError, TypeError, RuntimeError) as e:
+            # NOT a bare except (finzeug/ratecraft#17). This swallowed a
+            # `TypeError: Cannot subtract tz-naive and tz-aware` for every bond
+            # a YieldCurve built, and reported it as an ordinary NaN yield --
+            # so a whole column read as "did not converge" when in fact it never
+            # ran. A solver that fails to converge is a NaN; a programming error
+            # is not, and the two should not look alike.
+            logger.error(
+                "ytm solve failed (%s: %s) -- returning NaN. A TYPE error here "
+                "means the frame is malformed, not that the yield is unsolvable.",
+                type(e).__name__, e,
+            )
             return np.nan
 
 

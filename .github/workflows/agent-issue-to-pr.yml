@@ -10,6 +10,8 @@ name: agent-issue-to-pr
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write        # push the agent's branch
@@ -24,7 +26,14 @@ concurrency:
 
 jobs:
   agent:
-    if: github.event.label.name == 'agent-pr' || github.event.label.name == 'agent-deploy'
+    if: >
+      (github.event_name == 'issues' &&
+      (github.event.label.name == 'agent-pr' || github.event.label.name == 'agent-deploy'))
+      ||
+      (github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request == null &&
+      startsWith(github.event.comment.body, '/agent') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     uses: bdh-org/dev-common/.github/workflows/agent-issue-to-pr.yml@main
     with:
       # no deployable dev tier -> no gate, no agent-deploy auto-merge

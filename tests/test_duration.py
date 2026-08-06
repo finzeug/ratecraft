@@ -5,18 +5,18 @@ import datetime as dt
 import pytest
 
 from ratecraft.duration import (
-    parse_zero_maturity,
-    parse_actuarial_maturity,
-    parse_bond_maturity,
+    calculate_breakeven_inflation,
+    get_duration,
+    is_actuarial,
     is_nominal_zero,
     is_real_zero,
-    is_actuarial,
-    zero_yield_from_price,
-    zero_duration,
-    calculate_breakeven_inflation,
-    years_to_maturity,
-    get_duration,
     load_etf_durations,
+    parse_actuarial_maturity,
+    parse_bond_maturity,
+    parse_zero_maturity,
+    years_to_maturity,
+    zero_duration,
+    zero_yield_from_price,
 )
 
 

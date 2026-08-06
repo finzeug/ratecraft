@@ -6,15 +6,13 @@ for zero-coupon bonds and to load ETF durations from configuration.
 """
 
 import datetime as dt
+import logging
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 import yaml
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +30,13 @@ def load_etf_durations() -> dict[str, float]:
         logger.warning(f"Duration config file not found: {config_path}")
         return {}
 
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         config = yaml.safe_load(f)
 
     return config.get("etf_durations", {})
 
 
-def parse_zero_maturity(mnemonic: str) -> Optional[dt.date]:
+def parse_zero_maturity(mnemonic: str) -> dt.date | None:
     """
     Extract maturity date from zn_YYYY-MM-DD or zr_YYYY-MM-DD mnemonic.
 
@@ -59,7 +57,7 @@ def parse_zero_maturity(mnemonic: str) -> Optional[dt.date]:
         return None
 
 
-def parse_actuarial_maturity(mnemonic: str) -> Optional[dt.date]:
+def parse_actuarial_maturity(mnemonic: str) -> dt.date | None:
     """
     Extract maturity date from actuarial mnemonics.
 
@@ -89,7 +87,7 @@ def parse_actuarial_maturity(mnemonic: str) -> Optional[dt.date]:
         return None
 
 
-def parse_bond_maturity(fullname: str) -> Optional[dt.date]:
+def parse_bond_maturity(fullname: str) -> dt.date | None:
     """
     Extract maturity date from bond fullname.
 
@@ -141,7 +139,7 @@ def parse_bond_maturity(fullname: str) -> Optional[dt.date]:
     return None
 
 
-def is_tips_bond(mnemonic: str, namespace: Optional[str] = None) -> bool:
+def is_tips_bond(mnemonic: str, namespace: str | None = None) -> bool:
     """
     Check if a security is a TIPS bond based on mnemonic/namespace.
 
@@ -197,7 +195,7 @@ def is_real_type(mnemonic: str) -> bool:
     return is_real_zero(mnemonic) or is_actuarial_real(mnemonic)
 
 
-def years_to_maturity(mnemonic: str, as_of_date: dt.date) -> Optional[float]:
+def years_to_maturity(mnemonic: str, as_of_date: dt.date) -> float | None:
     """
     Calculate years to maturity for a zero-coupon bond or actuarial liability.
 
@@ -247,7 +245,7 @@ def zero_yield_from_price(price: float, years: float) -> float:
 
 def zero_duration(
     mnemonic: str, price: float, as_of_date: dt.date
-) -> Optional[dict]:
+) -> dict | None:
     """
     Calculate duration metrics for a zero-coupon bond or actuarial liability.
 
@@ -344,10 +342,10 @@ def get_duration(
     mnemonic: str,
     price: float,
     as_of_date: dt.date,
-    etf_durations: Optional[dict[str, float]] = None,
-    fullname: Optional[str] = None,
-    namespace: Optional[str] = None,
-) -> Optional[dict]:
+    etf_durations: dict[str, float] | None = None,
+    fullname: str | None = None,
+    namespace: str | None = None,
+) -> dict | None:
     """
     Get duration for any instrument (zeros/actuarial calculated, ETFs from config).
 

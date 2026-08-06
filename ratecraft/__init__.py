@@ -24,14 +24,14 @@ __all__ = [
     "load_etf_durations",
 ]
 
-from .bond import Bond, TIPS, BondAccessor, prior_coupon_date, accrued_interest_factor, ex_coupon_days  # noqa: F401
-from .yieldcurve import YieldCurve, cpi_factors  # noqa: F401
+from .bond import TIPS, Bond, BondAccessor, accrued_interest_factor, ex_coupon_days, prior_coupon_date  # noqa: F401
 from .duration import (  # noqa: F401
-    zero_duration,
-    zero_yield_from_price,
     calculate_breakeven_inflation,
     calculate_dollar_duration,
     get_duration,
     get_matching_zeros,
     load_etf_durations,
+    zero_duration,
+    zero_yield_from_price,
 )
+from .yieldcurve import YieldCurve, cpi_factors  # noqa: F401

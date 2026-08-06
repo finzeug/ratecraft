@@ -4,16 +4,15 @@ Tools for working with bonds:
 
 """
 
+import datetime as dt
+import logging
+import types
+
 import numpy as np
 import pandas as pd
 import scipy as sp
 import scipy.optimize
-
-import types
-import datetime as dt
 from dateutil.relativedelta import relativedelta
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -312,8 +311,12 @@ class BondAccessor:
             if not attr.startswith("__") and not isinstance(
                 getattr(b, attr), types.FunctionType
             ):
-                # Set attribute for the accessor : a series of that attribute
-                setattr(self, attr, self._obj.map(lambda _b: getattr(_b, attr)))
+                # Set attribute for the accessor : a series of that attribute.
+                # `attr` is bound as a default, not closed over: Series.map
+                # consumes the lambda immediately so late binding cannot bite
+                # today, but if this ever became lazy every accessor would
+                # silently return the LAST attribute in the loop.
+                setattr(self, attr, self._obj.map(lambda _b, _a=attr: getattr(_b, _a)))
 
     @staticmethod
     def _validate(obj):

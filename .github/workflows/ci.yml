@@ -1,0 +1,49 @@
+name: CI
+
+# Bespoke rather than `uses: bdh-org/dev-common/.github/workflows/ci.yml@main`,
+# for the reason finzeug/ledger-io documents on its own copy: the shared workflow
+# installs dependencies from `requirements-prod.txt`, which is the P4
+# conda-dev/pip-prod split for a repo with a Dockerfile. ratecraft is an
+# installable library with no container, so its pyproject IS the dependency
+# manifest and `pip install -e '.[dev]'` is the correct install step. Everything
+# else mirrors the shared workflow, and `make version-check` still comes from
+# dev-common so the version-drift guard stays a single source of truth.
+#
+# This repo had NO ci.yml at all until finzeug/ratecraft#23 -- tests and a ruff
+# config, and nothing running either, while panoptikon and slingshot vendor it
+# as a submodule and ledger-io installs it in its own CI.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      # dev-common only -- it is public, so this needs no credentials.
+      # stack-common is private and carries nothing CI needs.
+      - name: Clone dev-common submodule
+        run: git submodule update --init common
+
+      - name: Version consistency
+        run: make version-check
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install package and dev tools
+        run: pip install -e '.[dev]'
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: python -m pytest -vv tests/

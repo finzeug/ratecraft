@@ -4,7 +4,7 @@ import datetime as dt
 
 import pandas as pd
 
-from ratecraft.bond import Bond, TIPS, prior_coupon_date, accrued_interest_factor
+from ratecraft.bond import TIPS, Bond, accrued_interest_factor, prior_coupon_date
 
 
 def _make_bond_series(**overrides):

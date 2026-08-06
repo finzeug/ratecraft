@@ -4,16 +4,16 @@ yieldcurve module
 Contains class YieldCurve
 """
 
+import datetime as dt
+import logging
+
 import numpy as np
 import pandas as pd
-from dateutil.relativedelta import relativedelta
-import datetime as dt
 import scipy as sp
 import scipy.optimize
+from dateutil.relativedelta import relativedelta
 
 from .bond import Bond, accrued_interest_factor, ex_coupon_days
-
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -184,7 +184,11 @@ class YieldCurve:
 
                 # in the prior period: at or before the date of the prior maturity date of a security
                 # save these discount factors for convenience: set z for the payment dates for that maturity for the record and for review
-                for i, _z in zip(prior_per_dates.index, z):
+                # strict=True is provably safe and worth asserting: np.interp
+                # returns an array the length of its first argument, so z is
+                # always as long as prior_per_dates. If that ever stops holding,
+                # a silent truncation here would drop discount factors.
+                for i, _z in zip(prior_per_dates.index, z, strict=True):
                     self.payment_dates.loc[(d, i), "z"] = _z
 
             else:
@@ -209,11 +213,16 @@ class YieldCurve:
             d_from = rates.loc[d, "d_from"]
             days = rates.loc[d, "days"]
             period_share = (current_per_dates["d_to"] - d_from) / days
+            # The three loop variables are bound as defaults rather than closed
+            # over. fsolve consumes this lambda on the same statement, so the
+            # closure never outlives the iteration and late binding cannot bite
+            # today -- but it is one refactor away from doing so silently, and a
+            # wrong root here is a wrong discount curve with no error.
             v = sp.optimize.fsolve(
-                lambda force: current_per_dates["payment"].dot(
-                    np.exp(-force * period_share)
-                )
-                - resid_pv,
+                lambda force,
+                _pay=current_per_dates["payment"],
+                _share=period_share,
+                _resid=resid_pv: _pay.dot(np.exp(-force * _share)) - _resid,
                 0.01,  # not a great estimate but prob doesn't matter as is monotonic function
             )
             rates.loc[d, "force"] = v[0]  # will be one root

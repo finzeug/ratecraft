@@ -32,3 +32,16 @@ include = ["ratecraft*"]
 [tool.ruff]
 target-version = "py311"
 line-length = 120
+# The submodules carry their own tooling and are linted in their own repos.
+exclude = ["common", "stack-common"]
+
+# Pinned explicitly rather than left to ruff's defaults so a developer's ruff
+# and CI's ruff agree on what "clean" means. Without this ratecraft inherited
+# whatever the installed ruff selected -- 46 findings on 0.16, none on the
+# defaults this repo was written against. Same block as finzeug/ledger-io.
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP"]
+ignore = ["E501"]  # line length is the formatter's job
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "S101"]  # asserts are the point in tests

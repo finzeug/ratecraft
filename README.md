@@ -86,10 +86,10 @@ ruff check .              # lint
 
 `ratecraft` is a public, dependency-light math library vendored by the
 analytics app (panoptikon) as a git submodule and installed at build time — no
-credentials needed to fetch it. It carries the shared `common` (public) and
-`stack-common` (private, dev tooling only) submodules for consistent dev
-scaffolding; those are **not** needed to use the library — a non-recursive
-clone or a plain `pip install` gets you the math with no auth.
+credentials needed to fetch it. Its one submodule, `common` (dev-common), is
+public and carries dev scaffolding only; it is **not** needed to use the
+library. A recursive clone, a `pip install git+...`, and a plain non-recursive
+clone all work with no auth.
 
 ## License
 

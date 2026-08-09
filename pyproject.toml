@@ -33,7 +33,7 @@ include = ["ratecraft*"]
 target-version = "py311"
 line-length = 120
 # The submodules carry their own tooling and are linted in their own repos.
-exclude = ["common", "stack-common"]
+exclude = ["common"]
 
 # Pinned explicitly rather than left to ruff's defaults so a developer's ruff
 # and CI's ruff agree on what "clean" means. Without this ratecraft inherited

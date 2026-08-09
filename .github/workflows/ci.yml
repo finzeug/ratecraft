@@ -28,7 +28,8 @@ jobs:
           submodules: false
 
       # dev-common only -- it is public, so this needs no credentials.
-      # stack-common is private and carries nothing CI needs.
+      # ratecraft has one submodule (dev-common); init it explicitly rather
+      # than with submodules: recursive, which is unnecessary work here.
       - name: Clone dev-common submodule
         run: git submodule update --init common
 

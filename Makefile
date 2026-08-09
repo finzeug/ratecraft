@@ -13,6 +13,5 @@ CONDA_PREFIX ?= /home/vscode/miniforge3
 -include common/make/utils.mk
 -include common/make/python.mk
 -include common/make/devcontainer.mk
--include stack-common/make/deploy.mk
 
 # Project-specific targets below

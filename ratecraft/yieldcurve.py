@@ -64,10 +64,26 @@ class YieldCurve:
         # module default. A parameter that does nothing is worse than no
         # parameter, because the caller believes it worked.
         self.ex_coupon_days = ex_coupon_days
-        # Set the initial date: date of the prices
-        self.d0 = pd.to_datetime(
-            d0, utc=True
-        )  # force utc so don't have problems vs utc-naive
+        # Set the initial date: date of the prices.
+        #
+        # Made tz-aware so it does not blow up against utc-naive dates, AND
+        # normalised to midnight (finzeug/ratecraft#17). The second half is the
+        # root of symptoms 2 and 3: a price timestamp of 16:00 ET arrives here as
+        # 21:00 UTC while every maturity_date is midnight UTC, so day counts came
+        # out as `n days 03:00:00` truncated to n-1 -- every discount period in
+        # the curve was one day short, and the curve depended on the time of day
+        # the prices were stamped rather than only on the trading date.
+        #
+        # It also made near-dated maturities incoherent: a bond maturing the NEXT
+        # day landed at d_to == 0, colliding with the interpolation anchor, and
+        # got `days == 0` -- a whole period's force divided by zero days.
+        # Normalising means day counts are true date differences, which is also
+        # the convention duration.py already uses ((maturity - as_of_date).days).
+        #
+        # Assumes d0 names a trading date, not an instant: a tz-aware timestamp is
+        # converted to UTC before the day is taken, so the UTC calendar day wins.
+        # True for a US Treasury close (15:00-17:00 ET is the same UTC day).
+        self.d0 = pd.to_datetime(d0, utc=True).normalize()
 
         # Misc tidying up:
 
@@ -106,6 +122,57 @@ class YieldCurve:
         # a failure.
         if "price_date" in p:
             p["price_date"] = pd.to_datetime(p["price_date"], utc=True)
+
+        # Drop securities with no cash flow left to discount
+        # (finzeug/ratecraft#17, symptom 2).
+        #
+        # The cutoff is this module's OWN ex-coupon boundary, not merely d0.
+        # `prior_coupon_date` returns the last semianniversary at or before
+        # `date + ex_coupon_days`; maturity is itself a semianniversary, so for
+        # any bond maturing at or before that boundary the prior coupon date IS
+        # the maturity date -- and `Bond.coupon_dates` keeps only dates strictly
+        # after it, leaving the list EMPTY. Such a bond reports no payments at
+        # all, losing even its principal repayment, and `Bond.payments()` then
+        # fails on `res.iloc[-1, -1]` against an empty frame.
+        #
+        # Before this filter those bonds were bootstrapped as ordinary nodes.
+        # With d0 at 21:00 UTC a same-day maturity sorted BEFORE the d0 anchor at
+        # d_to == -1, its force was solved over a negative interval, and `rates`
+        # reported a nonsense annualised force (-307% in the reproduction);
+        # a maturity on d0+1 came out as a hard KeyError from _prep_payment_dates.
+        #
+        # Compare normalised, so a maturity carrying a stray time-of-day cannot
+        # slip through and land on the anchor's d_to == 0 with `days == 0`.
+        #
+        # Logged individually rather than counted: silently discarding a priced
+        # security is exactly the kind of quiet subtraction this issue is about.
+        ex_coupon_cutoff = self.d0 + pd.Timedelta(days=self.ex_coupon_days)
+        spent = p["maturity_date"].dt.normalize() <= ex_coupon_cutoff
+        if spent.any():
+            logger.warning(
+                "Dropping %d securities maturing on or before %s (matured, or "
+                "gone ex-coupon within ex_coupon_days=%s, so no receivable cash "
+                "flow remains to inform the curve): %s",
+                int(spent.sum()),
+                ex_coupon_cutoff.date(),
+                self.ex_coupon_days,
+                ", ".join(
+                    f"{c} (matures {m.date()})"
+                    for c, m in zip(
+                        p.loc[spent, "cusip"], p.loc[spent, "maturity_date"], strict=True
+                    )
+                ),
+            )
+            p = p[~spent]
+        if p.empty:
+            # Better than the IndexError on md[0] that used to follow, which said
+            # nothing about why there was no curve to build.
+            raise ValueError(
+                f"No securities maturing after {ex_coupon_cutoff.date()} "
+                f"(price date {self.d0.date()} + ex_coupon_days="
+                f"{self.ex_coupon_days}): nothing to bootstrap a curve from."
+            )
+
         p = p.sort_values("maturity_date")
         # Day count used in calculations
 
@@ -295,7 +362,12 @@ class YieldCurve:
                     "maturity_date": date,
                     "price_date": self.d0,
                 }
-            )
+            ),
+            # As in _prep_payment_dates: the curve's ex-coupon convention has to
+            # reach the Bond that produces the coupon dates and the accrued
+            # interest factor this yield is solved against
+            # (finzeug/ratecraft#17, symptom 4).
+            ex_coupon_days=self.ex_coupon_days,
         )
 
         pmt_dates = b.coupon_dates
@@ -416,7 +488,17 @@ class YieldCurve:
             # skip first row, which was added for interpolation
             self.payment_dates = (
                 pd.concat(
-                    self.rates.loc[d0 + relativedelta(days=1) :].apply(
+                    # `index > d0` is the exact expression for "skip the anchor
+                    # row" (finzeug/ratecraft#17, symptom 3). This was
+                    # `.loc[d0 + relativedelta(days=1):]`, which only coincided
+                    # with that intent while d0 sat at midnight: with d0 at 21:00
+                    # UTC the slice started at d0+1 21:00 and so ALSO dropped any
+                    # real maturity at 00:00 UTC on d0+1 -- and because the label
+                    # was then absent from the index, `.loc` raised KeyError
+                    # rather than returning fewer rows. Downstream that surfaced
+                    # as an ordinary warning, indistinguishable from a market
+                    # holiday.
+                    self.rates[self.rates.index > d0].apply(
                         # Get payment dates using the Bond class,
                         # just bare bones attributes to get payments
                         lambda r: Bond(
@@ -426,7 +508,13 @@ class YieldCurve:
                                     "maturity_date": r.maturity_date,
                                     "price_date": self.d0,
                                 }
-                            )
+                            ),
+                            # Was omitted (finzeug/ratecraft#17, symptom 4): this
+                            # Bond decides which coupon dates are still payable,
+                            # so dropping ex_coupon_days here pinned the payment
+                            # schedule -- and hence every discount factor keyed
+                            # off it -- to the module default.
+                            ex_coupon_days=self.ex_coupon_days,
                         ),
                         axis=1,
                     )
@@ -456,8 +544,18 @@ class YieldCurve:
                 .set_index(["maturity_date", "i"])
             )
         except Exception as e:
+            # Re-raised, not swallowed (finzeug/ratecraft#17). Setting
+            # payment_dates=None bought no robustness: __init__ dereferences it
+            # unconditionally on the next line
+            # (`self.payment_dates.loc[(d, 0), "z"]`), so the only thing the
+            # swallow achieved was replacing a precise KeyError naming the
+            # missing maturity date with an `AttributeError: 'NoneType'` three
+            # lines later, at a place that had nothing to do with the fault.
             self.payment_dates = None
-            logger.error(f"Could not prepare payment dates; exception {e}")
+            logger.error("Could not prepare payment dates: %s: %s", type(e).__name__, e)
+            raise RuntimeError(
+                f"Could not prepare payment dates for curve as of {d0.date()}"
+            ) from e
 
     def present_value(self, payments: pd.Series, total: bool = True):
         """

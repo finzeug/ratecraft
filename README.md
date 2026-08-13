@@ -1,11 +1,13 @@
 # ratecraft
 
-Fixed income math: bonds, yield curves, duration, and inflation.
+Fixed income math: bonds, yield curves, duration, inflation, and volatility
+surfaces.
 
 `ratecraft` is a **pure calculation library** — no I/O, no data fetching, no
 service surface. You bring the prices and dates; it does the fixed-income
 arithmetic: pricing bonds and TIPS, bootstrapping a yield curve, deriving zero
-yields and durations, and backing out breakeven inflation. Data acquisition and
+yields and durations, backing out breakeven inflation, and fitting an
+implied-volatility surface to an option chain. Data acquisition and
 presentation live in the consuming applications; this library is just the math.
 
 ## Install
@@ -22,7 +24,7 @@ Requires Python >= 3.11. Runtime dependencies: `numpy`, `pandas`, `scipy`,
 
 ## What's inside
 
-The public API (see `ratecraft.__all__`) is organized into three modules:
+The public API (see `ratecraft.__all__`) is organized into four modules:
 
 ### `ratecraft.bond` — instruments
 - **`Bond`** — a coupon bond built from a price record (a pandas `Series` with
@@ -50,6 +52,38 @@ The public API (see `ratecraft.__all__`) is organized into three modules:
   **`load_etf_durations`** — dollar duration, duration lookup by instrument
   mnemonic, zero-matching, and ETF duration config loading.
 
+### `ratecraft.vol` — the volatility surface
+- **`fit_surface`** — fits an implied-volatility surface to a normalized option
+  chain (a plain frame). Each expiry is fitted independently; the surface then
+  interpolates across expiries **linearly in total variance**.
+- **`VolSurface`** — the fitted surface: `.iv(log_moneyness, tenor)` to
+  evaluate, `.check_arbitrage()` to test it.
+- **`SVIParams`** / **`SABRParams`**, **`SVISlice`** / **`SABRSlice`** — the two
+  smile models and their per-expiry fits.
+- **`svi_total_variance`**, **`svi_derivatives`**, **`sabr_lognormal_vol`**,
+  **`durrleman_g`** — the underlying model functions.
+- **`black76_price`**, **`implied_vol_black76`** — forward-based option pricing
+  and its inversion, used when the chain carries prices rather than vols.
+
+Two design choices worth knowing about:
+
+**Interpolation is linear in total variance, not in volatility.** Interpolating
+in vol is the classic way to introduce calendar arbitrage between two
+individually clean expiries; linear-in-total-variance between two ordered
+slices is non-decreasing in tenor by construction. Outside the fitted tenor
+range the surface extrapolates at constant volatility, which is likewise
+non-decreasing.
+
+**The arbitrage conditions are checkable, and that is the point.**
+`check_arbitrage()` returns the violations it finds — butterfly via
+Durrleman's `g(k) >= 0`, calendar via total variance non-decreasing along the
+expiry axis — so a fit either satisfies them or it does not, and a test can say
+which rather than an eye on a chart.
+
+There is no caching: compute on read. If a *measured* latency problem ever
+justifies one, key it with `ratecraft.vol.FITTER_VERSION` (carried on every
+fitted surface) so a change to the fitter cannot silently serve a stale surface.
+
 ## Quick example
 
 The scalar helpers take and return plain floats:
@@ -73,6 +107,18 @@ dd = calculate_dollar_duration(modified_dur=7.2, market_value=1_000_000)
 
 The richer `Bond` / `TIPS` / `YieldCurve` types consume pandas price records and
 frames — see the docstrings on each for the exact expected columns.
+
+The surface takes a chain frame with `strike`, `forward`, a `tenor` in years (or
+`expiry` dates plus `asof=`), and either an `iv` column or `price` +
+`option_type` to imply one:
+
+```python
+from ratecraft import fit_surface
+
+surface = fit_surface(chain, model="svi")   # or model="sabr" for rate products
+surface.iv(log_moneyness=0.0, tenor=0.75)   # ATM vol three quarters out
+surface.check_arbitrage()                   # [] means clean on the grid checked
+```
 
 ## Development
 

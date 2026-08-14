@@ -5,7 +5,7 @@ implied-volatility surfaces.
 Pure calculation library with no I/O or data fetching.
 """
 
-__version__ = "0.1.12"
+__version__ = "0.1.13"
 
 __all__ = [
     "Bond",

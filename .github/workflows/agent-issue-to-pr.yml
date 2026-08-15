@@ -26,16 +26,27 @@ concurrency:
 
 jobs:
   agent:
+    # NOTE: every line below `if: >` is DATA, not YAML. A `#` inside a folded
+    # scalar is not a comment -- it folds into the expression string, GitHub
+    # rejects the expression, and the ENTIRE workflow file stops parsing. That
+    # is why these notes live above the key and must stay there. The failure is
+    # invisible: an unparseable workflow yields a run with ZERO jobs, so nothing
+    # goes red and the wrapper audit still counts the run as a conclusion.
+    # See bdh-org/home-infra#469.
+    #
+    # What the expression says: fire on the agent-pr/agent-deploy labels (this
+    # repo carries only agent-pr, since an empty gate disables agent-deploy
+    # auto-merge anyway), or on an issue comment from a trusted author. The
+    # /agent verb itself is decided by the reusable's gate job, not here -- an
+    # expression cannot express "a line that begins with /agent", having no way
+    # to write a newline (bdh-org/dev-common#202). The trust gate STAYS here:
+    # it is a security boundary and free to evaluate.
     if: >
       (github.event_name == 'issues' &&
       (github.event.label.name == 'agent-pr' || github.event.label.name == 'agent-deploy'))
       ||
       (github.event_name == 'issue_comment' &&
       github.event.issue.pull_request == null &&
-      # The /agent verb is decided by the reusable's gate job, not here: an
-      # expression cannot express "a line that begins with /agent", having no
-      # way to write a newline (bdh-org/dev-common#202). The trust gate below
-      # STAYS -- it is a security boundary and free to evaluate.
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     uses: bdh-org/dev-common/.github/workflows/agent-issue-to-pr.yml@main
     with:

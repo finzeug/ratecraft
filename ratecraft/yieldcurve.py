@@ -158,9 +158,7 @@ class YieldCurve:
                 self.ex_coupon_days,
                 ", ".join(
                     f"{c} (matures {m.date()})"
-                    for c, m in zip(
-                        p.loc[spent, "cusip"], p.loc[spent, "maturity_date"], strict=True
-                    )
+                    for c, m in zip(p.loc[spent, "cusip"], p.loc[spent, "maturity_date"], strict=True)
                 ),
             )
             p = p[~spent]
@@ -207,12 +205,8 @@ class YieldCurve:
         d = md[0]
         r = rates.loc[d]  # for convenience
         # Just compute directly, as will be < year.  Note: price does NOT include accrued interest.
-        rates.loc[d, "force"] = np.log(
-            (1 + r["coupon"]) / (r["price"] + r["accrued_interest_factor"] * r["rate"])
-        )
-        rates.loc[d, "force_cumul"] = rates.loc[
-            d, "force"
-        ]  # .cumsum() # it's a scalar, is nothing to accumulate here
+        rates.loc[d, "force"] = np.log((1 + r["coupon"]) / (r["price"] + r["accrued_interest_factor"] * r["rate"]))
+        rates.loc[d, "force_cumul"] = rates.loc[d, "force"]  # .cumsum() # it's a scalar, is nothing to accumulate here
         # the discount back to d0 from the start of the period
         rates.loc[d, "z"] = np.exp(-rates.loc[d, "force_cumul"])
         self.payment_dates.loc[(d, 0), "z"] = rates.loc[d, "z"]
@@ -239,9 +233,7 @@ class YieldCurve:
                 forces = np.interp(
                     prior_per_dates["d_to"],
                     rates["d_to"],
-                    [
-                        np.nan if x == b"" else x for x in rates["force_cumul"].values
-                    ],  # kludge to  deal with numpy 2.2
+                    [np.nan if x == b"" else x for x in rates["force_cumul"].values],  # kludge to  deal with numpy 2.2
                 )
                 z = np.exp(-forces)  # the discount factors
                 # add up the present values of all of the payments for securities at this maturity date from payments.
@@ -264,14 +256,11 @@ class YieldCurve:
             # Set the force over the current period ending at date "d", starting at "a"
 
             # ... the residual PV at the start of this period: discount at constant force back to this point.
-            z0 = rates.loc[
-                a, "z"
-            ]  # discount from BOP (the prior maturity date) to time 0
+            z0 = rates.loc[a, "z"]  # discount from BOP (the prior maturity date) to time 0
 
             resid_pv = (
                 r["price"]
-                + r["accrued_interest_factor"]
-                * r["rate"]  # because accrued interest is not included in given price
+                + r["accrued_interest_factor"] * r["rate"]  # because accrued interest is not included in given price
                 - p0
             ) / z0
             rates.loc[d, "p0"] = p0  # to keep for error checking
@@ -286,26 +275,21 @@ class YieldCurve:
             # today -- but it is one refactor away from doing so silently, and a
             # wrong root here is a wrong discount curve with no error.
             v = sp.optimize.fsolve(
-                lambda force,
-                _pay=current_per_dates["payment"],
-                _share=period_share,
-                _resid=resid_pv: _pay.dot(np.exp(-force * _share)) - _resid,
+                lambda force, _pay=current_per_dates["payment"], _share=period_share, _resid=resid_pv: (
+                    _pay.dot(np.exp(-force * _share)) - _resid
+                ),
                 0.01,  # not a great estimate but prob doesn't matter as is monotonic function
             )
             rates.loc[d, "force"] = v[0]  # will be one root
 
             # Set the cumulative force, needed in next round
-            rates.loc[d, "force_cumul"] = (
-                rates.loc[a, "force_cumul"] + rates.loc[d, "force"]
-            )
+            rates.loc[d, "force_cumul"] = rates.loc[a, "force_cumul"] + rates.loc[d, "force"]
             rates.loc[d, "z"] = np.exp(-rates.loc[d, "force_cumul"])
 
             # Set the discounts of the (maturity_date, payment_date) pairs
             # self.rates = rates
             # self.present_value(pd.Series(1, index=current_per_dates.index), total=False)
-            self.payment_dates.loc[d, "z"] = z0 * np.exp(
-                -period_share * rates.loc[d, "force"]
-            )
+            self.payment_dates.loc[d, "z"] = z0 * np.exp(-period_share * rates.loc[d, "force"])
 
             # Keep this maturity date to use for the next round
             a = d
@@ -327,15 +311,9 @@ class YieldCurve:
             rates.loc[date_end, "d_from"] = self.rates.loc[prior_date, "d_to"]
             rates.loc[date_end, "days"] = float((date_end - prior_date).days)
             # Get total force over last 2 years or so before final date
-            last_2_years = rates.loc[prior_date + relativedelta(years=-2) : prior_date][
-                ["days", "force"]
-            ].sum()
-            rates.loc[date_end, "force"] = rates.loc[date_end, "days"] * (
-                last_2_years["force"] / last_2_years["days"]
-            )
-            rates.loc[date_end, "force_cumul"] = (
-                rates.loc[prior_date, "force_cumul"] + rates.loc[date_end, "force"]
-            )
+            last_2_years = rates.loc[prior_date + relativedelta(years=-2) : prior_date][["days", "force"]].sum()
+            rates.loc[date_end, "force"] = rates.loc[date_end, "days"] * (last_2_years["force"] / last_2_years["days"])
+            rates.loc[date_end, "force_cumul"] = rates.loc[prior_date, "force_cumul"] + rates.loc[date_end, "force"]
             rates.loc[date_end, "z"] = np.exp(-rates.loc[date_end, "force_cumul"])
 
         rates["force_annual"] = rates["force"] / rates["days"] * 365.25
@@ -386,9 +364,7 @@ class YieldCurve:
         )
 
         a = 0.5 * z.sum()  # annuity factor
-        aif = (
-            b.accrued_interest_factor
-        )  # must pay this times coupon in addition to the price of 1
+        aif = b.accrued_interest_factor  # must pay this times coupon in addition to the price of 1
 
         p = z[-1]  # principal factor
 
@@ -404,9 +380,7 @@ class YieldCurve:
         return pd.Series(
             {
                 m / 12: self.yield_rate(self.d0 + relativedelta(months=m))
-                for m in np.concatenate(
-                    [[1, 3, 6], 12 * np.array([1, 2, 3, 5, 7, 10, 20, 30])]
-                )
+                for m in np.concatenate([[1, 3, 6], 12 * np.array([1, 2, 3, 5, 7, 10, 20, 30])])
             }
         )
 
@@ -432,15 +406,11 @@ class YieldCurve:
         )
         rates = rates.rename(columns={"sectype": "num_bonds"})  # since that's the count
 
-        rates["coupon"] = (
-            rates["rate"] / 2
-        )  # coupon for total bonds with that maturity date
+        rates["coupon"] = rates["rate"] / 2  # coupon for total bonds with that maturity date
         rates["price"] = rates["price"] / 100  # for $1 of principal for the bonds
         rates["maturity_date"] = rates.index  # for use in computations
         rates["accrued_interest_factor"] = rates.maturity_date.map(
-            lambda _: accrued_interest_factor(
-                self.d0, _, ex_coupon_days=self.ex_coupon_days
-            )
+            lambda _: accrued_interest_factor(self.d0, _, ex_coupon_days=self.ex_coupon_days)
         )
         rates["prior_date"] = rates.maturity_date.shift()
         md = list(rates.index)  # maturity dates
@@ -498,7 +468,8 @@ class YieldCurve:
                     # rather than returning fewer rows. Downstream that surfaced
                     # as an ordinary warning, indistinguishable from a market
                     # holiday.
-                    self.rates[self.rates.index > d0].apply(
+                    self.rates[self.rates.index > d0]
+                    .apply(
                         # Get payment dates using the Bond class,
                         # just bare bones attributes to get payments
                         lambda r: Bond(
@@ -519,7 +490,8 @@ class YieldCurve:
                         axis=1,
                     )
                     # Dataframe, by maturity date, of payment dates, for each row, to get concatenated
-                    .bnd.payments().to_dict(),
+                    .bnd.payments()
+                    .to_dict(),
                     names=["maturity_date"],
                 )["total"]
                 .rename("payment")
@@ -531,10 +503,7 @@ class YieldCurve:
                     i=lambda df: (
                         (
                             (df.payment_date.dt.year * 12 + df.payment_date.dt.month)
-                            - (
-                                df.maturity_date.dt.year * 12
-                                + df.maturity_date.dt.month
-                            )
+                            - (df.maturity_date.dt.year * 12 + df.maturity_date.dt.month)
                         )
                         / 6
                     ).astype(int),
@@ -553,9 +522,7 @@ class YieldCurve:
             # lines later, at a place that had nothing to do with the fault.
             self.payment_dates = None
             logger.error("Could not prepare payment dates: %s: %s", type(e).__name__, e)
-            raise RuntimeError(
-                f"Could not prepare payment dates for curve as of {d0.date()}"
-            ) from e
+            raise RuntimeError(f"Could not prepare payment dates for curve as of {d0.date()}") from e
 
     def present_value(self, payments: pd.Series, total: bool = True):
         """
@@ -594,14 +561,8 @@ def cpi_factors(dates, yield_curve_real: YieldCurve, yield_curve_nominal: YieldC
     assert yield_curve_real.d0 == yield_curve_nominal.d0
     d = yield_curve_real.d0
 
-    tmp = {
-        _: pd.Series({(_ - d).days: 1}) for _ in dates
-    }  # small series for pv functions
+    tmp = {_: pd.Series({(_ - d).days: 1}) for _ in dates}  # small series for pv functions
 
     return pd.Series(
-        {
-            _d: yield_curve_real.present_value(_s)
-            / yield_curve_nominal.present_value(_s)
-            for _d, _s in tmp.items()
-        }
+        {_d: yield_curve_real.present_value(_s) / yield_curve_nominal.present_value(_s) for _d, _s in tmp.items()}
     )

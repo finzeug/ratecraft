@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 ex_coupon_days = 1
 
 
-def prior_coupon_date(
-    date: dt.datetime, maturity_date: dt.datetime, ex_coupon_days: int = ex_coupon_days
-):
+def prior_coupon_date(date: dt.datetime, maturity_date: dt.datetime, ex_coupon_days: int = ex_coupon_days):
     """
     Get the date of the prior coupon payment as of the given date.
 
@@ -36,9 +34,7 @@ def prior_coupon_date(
     # d0 = (maturity_date + relativedelta(year=date.year - 1)).date()  # to make utc naive I think
     if isinstance(date, dt.date):
         date = dt.datetime.combine(date, dt.time.min)
-    dx = date + relativedelta(
-        days=ex_coupon_days
-    )  # TODO state definition: next coupon?
+    dx = date + relativedelta(days=ex_coupon_days)  # TODO state definition: next coupon?
     dates_before = [
         _
         for _ in [  # [d0 + relativedelta(months=m) for m in [0, 6, 12, 18]]
@@ -50,7 +46,9 @@ def prior_coupon_date(
     if len(dates_before):
         return max(dates_before)
     else:
-        logger.error(f"No prior coupon dates for date {date}, maturity_date {maturity_date}, ex_coupon_days {ex_coupon_days}")
+        logger.error(
+            f"No prior coupon dates for date {date}, maturity_date {maturity_date}, ex_coupon_days {ex_coupon_days}"
+        )
         return pd.NaT
 
 
@@ -102,9 +100,7 @@ class Bond:
         p = p.copy()  # the price record from get_prices
         for c in ["end_of_day", "buy", "sell"]:
             if c in p:
-                if (
-                    p[c] > 10
-                ):  # a safety threshold in case did not pass as from get_prices
+                if p[c] > 10:  # a safety threshold in case did not pass as from get_prices
                     p[c] /= 100  # to put on unitary basis
         if "end_if_day" in p:
             p["end_of_day"] = p["end_of_day"].replace({0: np.nan})
@@ -112,9 +108,7 @@ class Bond:
 
         # Get coupon dates
         # 1. the last coupon date that the bond had, not the last in the series
-        self.prior_coupon_date = prior_coupon_date(
-            p["price_date"], p["maturity_date"], ex_coupon_days
-        )
+        self.prior_coupon_date = prior_coupon_date(p["price_date"], p["maturity_date"], ex_coupon_days)
 
         self.coupon_dates = [
             d
@@ -137,9 +131,7 @@ class Bond:
         self.accrued_interest_factor = max(
             0,
             (
-                pd.to_datetime(
-                    self.p.price_date
-                ).date()  # kludge because sometimes came through as date already
+                pd.to_datetime(self.p.price_date).date()  # kludge because sometimes came through as date already
                 - self.prior_coupon_date.date()
             ).days
             / 365,
@@ -208,18 +200,14 @@ class Bond:
         res["coupon_pct"] = pd.Series({_: p["rate"] for _ in self.coupon_dates})
         res["coupon_pct"] = res["coupon_pct"].fillna(0)
         res["days"] = [(_ - d).days for _ in ds]
-        res["price"] = p[basis] * (1 / p[basis]) ** (
-            res["days"] / days
-        )  # is accreted income
+        res["price"] = p[basis] * (1 / p[basis]) ** (res["days"] / days)  # is accreted income
 
         if yield_curve_nominal is None or yield_curve_real is None:
             res["cpi_factor"] = 1
         else:
             res["cpi_factor"] = cpi_factors(ds, yield_curve_real, yield_curve_nominal)
 
-        res["face_with_cpi"] = res[
-            "cpi_factor"
-        ]  # must grow from 100 with the CPI .  Used for coupon.
+        res["face_with_cpi"] = res["cpi_factor"]  # must grow from 100 with the CPI .  Used for coupon.
 
         # semiannual coupon depends on the CPI.
         # TODO: confirm updated semiannually with CPI not annually.
@@ -251,9 +239,7 @@ class Bond:
     def ytm(self, basis="sell"):
         """ "YTM for the bond using prices at the given rate"""
         f = (  # noqa: E731
-            lambda r: self.const_rate_pv(r, basis)
-            - self.p[basis]
-            - self.accrued_interest
+            lambda r: self.const_rate_pv(r, basis) - self.p[basis] - self.accrued_interest
         )
         try:
             x = sp.optimize.fsolve(f, 0.02)  # Solve for the yield
@@ -268,7 +254,8 @@ class Bond:
             logger.error(
                 "ytm solve failed (%s: %s) -- returning NaN. A TYPE error here "
                 "means the frame is malformed, not that the yield is unsolvable.",
-                type(e).__name__, e,
+                type(e).__name__,
+                e,
             )
             return np.nan
 
@@ -308,9 +295,7 @@ class BondAccessor:
 
         b = self._obj.values[0]  # the first one, is a Bond instance
         for attr in b.__dict__:  # for each bond attribute:
-            if not attr.startswith("__") and not isinstance(
-                getattr(b, attr), types.FunctionType
-            ):
+            if not attr.startswith("__") and not isinstance(getattr(b, attr), types.FunctionType):
                 # Set attribute for the accessor : a series of that attribute.
                 # `attr` is bound as a default, not closed over: Series.map
                 # consumes the lambda immediately so late binding cannot bite
@@ -321,9 +306,7 @@ class BondAccessor:
     @staticmethod
     def _validate(obj):
         # verify required keys are present
-        assert all(
-            [isinstance(_o, Bond) for _o in obj]
-        ), "All objects must be of type Bond to use the accessor"
+        assert all([isinstance(_o, Bond) for _o in obj]), "All objects must be of type Bond to use the accessor"
 
     def ytm(self, basis="sell"):
         return self._obj.map(lambda b: b.ytm(basis))

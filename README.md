@@ -96,7 +96,7 @@ from ratecraft import (
 )
 
 # Yield of a 10-year zero trading at 74.41 (per 100 face):
-y = zero_yield_from_price(price=0.7441, years=10)      # ~0.0300 (3.0%)
+y = zero_yield_from_price(price=0.7441, years=10)  # ~0.0300 (3.0%)
 
 # Breakeven inflation from a nominal vs. a real 10-year zero price:
 be = calculate_breakeven_inflation(zn_price=0.7441, zr_price=0.8203, years=10)
@@ -115,9 +115,9 @@ The surface takes a chain frame with `strike`, `forward`, a `tenor` in years (or
 ```python
 from ratecraft import fit_surface
 
-surface = fit_surface(chain, model="svi")   # or model="sabr" for rate products
-surface.iv(log_moneyness=0.0, tenor=0.75)   # ATM vol three quarters out
-surface.check_arbitrage()                   # [] means clean on the grid checked
+surface = fit_surface(chain, model="svi")  # or model="sabr" for rate products
+surface.iv(log_moneyness=0.0, tenor=0.75)  # ATM vol three quarters out
+surface.check_arbitrage()  # [] means clean on the grid checked
 ```
 
 ## Development

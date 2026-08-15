@@ -85,9 +85,7 @@ class TestD0Normalisation:
 
         assert morning.d0 == close.d0 == pd.Timestamp("2024-01-02", tz="UTC")
         pd.testing.assert_series_equal(morning.rates["d_to"], close.rates["d_to"])
-        pd.testing.assert_series_equal(
-            morning.rates["force_cumul"], close.rates["force_cumul"]
-        )
+        pd.testing.assert_series_equal(morning.rates["force_cumul"], close.rates["force_cumul"])
 
     def test_day_counts_are_true_date_differences(self):
         """2024-01-02 to 2024-06-30 is 180 days, not 179.
@@ -116,9 +114,7 @@ class TestSpentSecuritiesAreExcluded:
         with_matured = YieldCurve(D0, frame([("2024-01-02", 0.0175, 99.98)] + BASE))
 
         assert pd.Timestamp("2024-01-02", tz="UTC") not in maturities(with_matured)
-        pd.testing.assert_series_equal(
-            clean.rates["force_cumul"], with_matured.rates["force_cumul"]
-        )
+        pd.testing.assert_series_equal(clean.rates["force_cumul"], with_matured.rates["force_cumul"])
         pd.testing.assert_series_equal(clean.rates["z"], with_matured.rates["z"])
 
     def test_no_node_sorts_before_the_anchor(self):

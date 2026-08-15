@@ -106,7 +106,7 @@ def parse_bond_maturity(fullname: str) -> dt.date | None:
         return None
 
     # Pattern 1: MM/DD/YYYY (e.g., "02/15/2050")
-    match = re.search(r'(\d{2})/(\d{2})/(\d{4})', fullname)
+    match = re.search(r"(\d{2})/(\d{2})/(\d{4})", fullname)
     if match:
         try:
             return dt.date(int(match.group(3)), int(match.group(1)), int(match.group(2)))
@@ -114,7 +114,7 @@ def parse_bond_maturity(fullname: str) -> dt.date | None:
             pass
 
     # Pattern 2: "DUE MM/DD/YY" (e.g., "DUE 10/15/27")
-    match = re.search(r'DUE\s+(\d{1,2})/(\d{1,2})/(\d{2})', fullname)
+    match = re.search(r"DUE\s+(\d{1,2})/(\d{1,2})/(\d{2})", fullname)
     if match:
         try:
             year = int(match.group(3))
@@ -125,7 +125,7 @@ def parse_bond_maturity(fullname: str) -> dt.date | None:
             pass
 
     # Pattern 3: percentage followed by MM/YY (e.g., "1.625%10/27")
-    match = re.search(r'%\s*(\d{1,2})/(\d{2})', fullname)
+    match = re.search(r"%\s*(\d{1,2})/(\d{2})", fullname)
     if match:
         try:
             year = int(match.group(2))
@@ -243,9 +243,7 @@ def zero_yield_from_price(price: float, years: float) -> float:
     return (1.0 / price) ** (1.0 / years) - 1.0
 
 
-def zero_duration(
-    mnemonic: str, price: float, as_of_date: dt.date
-) -> dict | None:
+def zero_duration(mnemonic: str, price: float, as_of_date: dt.date) -> dict | None:
     """
     Calculate duration metrics for a zero-coupon bond or actuarial liability.
 
@@ -287,9 +285,7 @@ def zero_duration(
     }
 
 
-def calculate_breakeven_inflation(
-    zn_price: float, zr_price: float, years: float
-) -> float:
+def calculate_breakeven_inflation(zn_price: float, zr_price: float, years: float) -> float:
     """
     Calculate implied breakeven inflation from nominal vs real zero prices.
 
@@ -315,9 +311,7 @@ def calculate_breakeven_inflation(
     return (zr_price / zn_price) ** (1.0 / years) - 1.0
 
 
-def adjust_real_value_for_inflation(
-    value: float, breakeven: float, years: float
-) -> float:
+def adjust_real_value_for_inflation(value: float, breakeven: float, years: float) -> float:
     """
     Adjust real zero value for expected inflation.
 
@@ -370,8 +364,12 @@ def get_duration(
         Returns None if no duration data available.
     """
     # Check if it's a zero-coupon bond or actuarial liability
-    if (is_nominal_zero(mnemonic) or is_real_zero(mnemonic) or
-            is_actuarial_nominal(mnemonic) or is_actuarial_real(mnemonic)):
+    if (
+        is_nominal_zero(mnemonic)
+        or is_real_zero(mnemonic)
+        or is_actuarial_nominal(mnemonic)
+        or is_actuarial_real(mnemonic)
+    ):
         metrics = zero_duration(mnemonic, price, as_of_date)
         if metrics is not None:
             return {
@@ -486,15 +484,17 @@ def get_matching_zeros(
 
         breakeven = calculate_breakeven_inflation(zn["price"], zr["price"], years)
 
-        results.append({
-            "maturity_date": maturity,
-            "zn_mnemonic": zn["mnemonic"],
-            "zr_mnemonic": zr["mnemonic"],
-            "zn_price": zn["price"],
-            "zr_price": zr["price"],
-            "years": years,
-            "breakeven": breakeven,
-            "breakeven_pct": breakeven * 100,
-        })
+        results.append(
+            {
+                "maturity_date": maturity,
+                "zn_mnemonic": zn["mnemonic"],
+                "zr_mnemonic": zr["mnemonic"],
+                "zn_price": zn["price"],
+                "zr_price": zr["price"],
+                "years": years,
+                "breakeven": breakeven,
+                "breakeven_pct": breakeven * 100,
+            }
+        )
 
     return pd.DataFrame(results)

@@ -34,9 +34,9 @@ def test_subtracting_the_two_no_longer_raises():
     maturity = pd.to_datetime(pd.Series(["2030-05-15"]), utc=True)
     naive = pd.to_datetime(pd.Series(["2024-01-02 16:00"]))
     with pytest.raises(TypeError):
-        _ = (maturity - naive)          # what used to happen
+        _ = maturity - naive  # what used to happen
     aware = pd.to_datetime(naive, utc=True)
-    assert (maturity - aware).dt.days.iloc[0] > 0   # what happens now
+    assert (maturity - aware).dt.days.iloc[0] > 0  # what happens now
 
 
 def test_the_yield_solve_no_longer_swallows_everything():

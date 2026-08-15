@@ -46,5 +46,12 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      # Added directly, not via dev-common's check-format input: this workflow is
+      # bespoke (see the header) and does not call the shared reusable. Vendored
+      # trees excluded for the same reason the shared one excludes them -- a repo
+      # must not be gated on its dependencies' formatting (bdh-org/dev-common#191).
+      - name: Format check
+        run: ruff format --check --exclude common --exclude stack-common --exclude lib .
+
       - name: Test
         run: python -m pytest -vv tests/

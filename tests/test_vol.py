@@ -119,7 +119,11 @@ class TestSmileModels:
         k = np.linspace(-0.5, 0.5, 21)
         _, dw, d2w = svi_derivatives(k, params)
         h = 1e-5
-        up, down, mid = (svi_total_variance(k + h, params), svi_total_variance(k - h, params), svi_total_variance(k, params))
+        up, down, mid = (
+            svi_total_variance(k + h, params),
+            svi_total_variance(k - h, params),
+            svi_total_variance(k, params),
+        )
         assert dw == pytest.approx((up - down) / (2 * h), abs=1e-7)
         assert d2w == pytest.approx((up - 2 * mid + down) / h**2, abs=1e-3)
 
@@ -436,11 +440,21 @@ class TestArbitrage:
         total variance has already fallen.
         """
         early = SVISlice(
-            tenor=0.5, forward=100.0, n_quotes=9, rmse=0.0, k_min=-0.3, k_max=0.3,
+            tenor=0.5,
+            forward=100.0,
+            n_quotes=9,
+            rmse=0.0,
+            k_min=-0.3,
+            k_max=0.3,
             params=SVIParams(a=0.045, b=0.02, rho=0.0, m=0.0, sigma=0.1),
         )
         late = SVISlice(
-            tenor=1.0, forward=100.0, n_quotes=9, rmse=0.0, k_min=-0.3, k_max=0.3,
+            tenor=1.0,
+            forward=100.0,
+            n_quotes=9,
+            rmse=0.0,
+            k_min=-0.3,
+            k_max=0.3,
             params=SVIParams(a=0.040, b=0.02, rho=0.0, m=0.0, sigma=0.1),
         )
         assert late.iv(0.0) < early.iv(0.0)  # a vol-space monotonicity check passes

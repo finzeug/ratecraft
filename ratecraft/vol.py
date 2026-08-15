@@ -291,11 +291,15 @@ def sabr_lognormal_vol(forward, strike, tenor, params: SABRParams):
     ratio = np.where(near_atm, 1.0, z / np.where(near_atm, 1.0, x_of_z))
 
     denominator = fk_mid * (1.0 + one_minus_beta**2 / 24.0 * log_fk**2 + one_minus_beta**4 / 1920.0 * log_fk**4)
-    correction = 1.0 + (
-        one_minus_beta**2 / 24.0 * alpha**2 / fk**one_minus_beta
-        + rho * beta * nu * alpha / (4.0 * fk_mid)
-        + (2.0 - 3.0 * rho**2) / 24.0 * nu**2
-    ) * t
+    correction = (
+        1.0
+        + (
+            one_minus_beta**2 / 24.0 * alpha**2 / fk**one_minus_beta
+            + rho * beta * nu * alpha / (4.0 * fk_mid)
+            + (2.0 - 3.0 * rho**2) / 24.0 * nu**2
+        )
+        * t
+    )
     return alpha / denominator * ratio * correction
 
 
@@ -730,14 +734,14 @@ def _fit_sabr(strikes: np.ndarray, ivs: np.ndarray, forward: float, tenor: float
 def _fit_slice(group: pd.DataFrame, model: str, beta: float) -> VolSlice:
     tenor = float(group["tenor"].iloc[0])
     if len(group) < _MIN_QUOTES[model]:
-        raise ValueError(
-            f"expiry T={tenor:.4f} has {len(group)} quote(s); {model} needs at least {_MIN_QUOTES[model]}"
-        )
+        raise ValueError(f"expiry T={tenor:.4f} has {len(group)} quote(s); {model} needs at least {_MIN_QUOTES[model]}")
 
     forwards = group["forward"].to_numpy(dtype=float)
     forward = float(forwards.mean())
     if np.ptp(forwards) > 1e-6 * max(abs(forward), 1.0):
-        logger.warning("expiry T=%.4f quotes %d distinct forwards; using their mean %.6g", tenor, len(set(forwards)), forward)
+        logger.warning(
+            "expiry T=%.4f quotes %d distinct forwards; using their mean %.6g", tenor, len(set(forwards)), forward
+        )
 
     k = group["k"].to_numpy(dtype=float)
     ivs = group["iv"].to_numpy(dtype=float)

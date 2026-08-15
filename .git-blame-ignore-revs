@@ -1,0 +1,5 @@
+# Bulk reformat commits — ignored by `git blame`.
+# git blame --ignore-revs-file .git-blame-ignore-revs
+
+# ruff format the tree (bdh-org/home-infra#314)
+0ba3389dd4410798274183983349c6103e7b3a0d

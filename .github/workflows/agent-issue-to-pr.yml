@@ -32,7 +32,10 @@ jobs:
       ||
       (github.event_name == 'issue_comment' &&
       github.event.issue.pull_request == null &&
-      startsWith(github.event.comment.body, '/agent') &&
+      # The /agent verb is decided by the reusable's gate job, not here: an
+      # expression cannot express "a line that begins with /agent", having no
+      # way to write a newline (bdh-org/dev-common#202). The trust gate below
+      # STAYS -- it is a security boundary and free to evaluate.
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     uses: bdh-org/dev-common/.github/workflows/agent-issue-to-pr.yml@main
     with:
